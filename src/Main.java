@@ -104,15 +104,10 @@ public class Main extends Application {
         /* GUI part */
 
         // textbox
-        passage = getPassage();
-
         textOverflow = new TextFlow();
         textOverflow.setMaxSize(1200, 300);
         textOverflow.setLayoutX(40);
         textOverflow.setLayoutY(40);
-
-        //init the passage
-        showText(passage, incorrectIndexes);
         root.getChildren().add(textOverflow);
 
         // user input textarea
@@ -335,19 +330,32 @@ public class Main extends Application {
                         alert.setContentText("User name can not be empty.");
                         alert.showAndWait();
                     } else {
+                        letters.clear();
+                        userInput.clear();
+                        incorrectIndexes.clear();
+                        passage = getPassage();
+                        textOverflow.getChildren().clear();
+                        showText(passage, incorrectIndexes);
+                        gameStarted = true;
+                        t0 = new Date().getTime();
+
                         startGroup.setVisible(false);
                         popup.setVisible(false);
-
-                        t0 = new Date().getTime();
                     }
 
-                    gameStarted = true;
 
                 }
 
                 // try again with the same user name
                 if (btn.getText() == "Try Again") {
 
+                    letters.clear();
+                    userInput.clear();
+                    incorrectIndexes.clear();
+                    passage = getPassage();
+                    textOverflow.getChildren().clear();
+                    showText(passage, incorrectIndexes);
+                    gameStarted = true;
                     t0 = new Date().getTime();
 
                     startGroup.setVisible(false);
