@@ -1,5 +1,22 @@
+
+/*
+ *	Chance Hughes and Tengnan Yao(Team Faceplant)
+ *	OCCC spring 2020
+ *	advanced java final project: Typing Game
+ *  Brief Program Description:
+ *          Our project is a typing game where the user will be given a random paragraph or sentence
+ *      that they will have to spell out correctly in order to get a higher score. The program
+ *      will first ask the user for a name so we can keep track of the player’s high score in a
+ *      txt file. The paragraph will be randomly selected from a set and displayed on the screen.
+ *      The game will check 1 letter a`t a time while checking if the word is being spelled
+ *      correctly. Once the user presses space, the program will check if the word was spelled
+ *      correctly and move to the next word. When the user reaches the end of the paragraph it will
+ *      give you a score based how accurate and the speed at which the user typed.
+ */
+
+
+
 import javafx.application.Application;
-//import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -7,21 +24,22 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.scene.effect.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
-
+import javafx.scene.input.KeyEvent;
+import javafx.scene.text.Text;
+import javafx.scene.text.Font;
 import java.io.*;
 import java.util.*;
 
-//new imports for text generation
-import javafx.scene.text.Text;
-import javafx.scene.text.Font;
 
 
 public class Main extends Application {
 
+    // global variables
     String[][] keys = {
             {"1", "2", "3", "4", "5", "6", "7", "8", "9", "0", "-", "+"},
             {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"},
@@ -33,7 +51,6 @@ public class Main extends Application {
     String keyColor = "#666";
     String keyPressedColor = "#777";
     String keyboardColor = "#ccc";
-    //    DropShadow ds0 = new DropShadow(0, 0, 0, Color.web("#333", 0));
     DropShadow ds0 = new DropShadow(0, 1, 1, Color.web("#333"));
     DropShadow ds1 = new DropShadow(1, 2, 2, Color.web("#333"));
     DropShadow ds2 = new DropShadow(2, 3, 3, Color.web("#333"));
@@ -49,6 +66,7 @@ public class Main extends Application {
 
     Rectangle popup;
     HBox userNameHBox, resultHBox;
+    TextFlow textOverflow;
     TextField userNameInput;
     Group startGroup, rankingGroup;
     Button btnStart, btnTryAgain, btnSwitchUser, btnRanking, btnExit, btnClose;
@@ -56,6 +74,11 @@ public class Main extends Application {
     TableView<User> table;
     TableColumn c1, c2, c3, c4, c5;
 
+    ArrayList<Text> letters = new ArrayList<>();
+    ArrayList<Integer> incorrectIndexes = new ArrayList<>();
+    TextArea userInput = new TextArea();
+
+    // main function
     public static void main (String[] args)
     {
         launch(args);
@@ -65,18 +88,8 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) throws Exception {
 
+        // base setup
         Pane root = new Pane();
-
-
-
-        // GUI
-
-        // textbox
-        String passage = getPassage();
-        Text text = new Text(40, 40, passage);
-        text.setFont(Font.font ("Verdana", 20));
-        root.getChildren().add(text);
-
 
         Scene scene = new Scene(root);
         primaryStage.setWidth(1280);
@@ -84,11 +97,32 @@ public class Main extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Digital Keyboard");
 
-
         primaryStage.show();
 
-        // add keyboard
-//        Pane paneKeys = new Pane();
+
+
+        /* GUI part */
+
+        // textbox
+        passage = getPassage();
+
+        textOverflow = new TextFlow();
+        textOverflow.setMaxSize(1200, 300);
+        textOverflow.setLayoutX(40);
+        textOverflow.setLayoutY(40);
+
+        //init the passage
+        showText(passage, incorrectIndexes);
+        root.getChildren().add(textOverflow);
+
+        // user input textarea
+        userInput.setWrapText(true);
+        userInput.setLayoutX(40);
+        userInput.setLayoutY(100);
+        userInput.setPrefSize(1196, 200);
+        userInput.setFont(new Font("Arial", 20));
+        userInput.addEventHandler(KeyEvent.KEY_TYPED, this::onKeyPressed);
+        root.getChildren().add(userInput);
 
 
         // add keys
@@ -183,11 +217,12 @@ public class Main extends Application {
         popup.setFill(Color.web(keyboardColor));
         root.getChildren().add(popup);
 
-        // Start Page
+        // popup page
         startGroup = new Group();
         startGroup.setLayoutX(0);
         startGroup.setLayoutY(0);
 
+        // user name section
         userNameHBox = new HBox();
         Label yourNameLabel = new Label("Your name:");
         yourNameLabel.setFont(new Font("Arial", 20));
@@ -198,6 +233,7 @@ public class Main extends Application {
         userNameHBox.setLayoutY(300);
         startGroup.getChildren().add(userNameHBox);
 
+        // result section
         resultHBox = new HBox();
         scoreLabel = new Label();
         scoreLabel.setFont(new Font("Arial", 20));
@@ -207,42 +243,29 @@ public class Main extends Application {
         startGroup.getChildren().add(resultHBox);
         resultHBox.setVisible(false);
 
+        // functional buttons
         btnStart = createNewButton("Start", 550, 380, 180, 40);
-
         btnTryAgain = createNewButton("Try Again", 550, 380, 180, 40);
-
         btnSwitchUser = createNewButton("Switch User", 570, 450, 140, 40);
-
         btnRanking = createNewButton("Ranking", 1130, 550, 100, 40);
-
         btnExit = createNewButton("Exit", 1130, 600, 100, 40);
-
         startGroup.getChildren().addAll(btnStart, btnTryAgain, btnSwitchUser, btnRanking, btnExit);
 
+        //init button visibilities
         btnTryAgain.setVisible(false);
         btnSwitchUser.setVisible(false);
         btnRanking.setVisible(false);
 
         root.getChildren().add(startGroup);
 
-        // user typing
 
-        Button btnFinish = createNewButton("Finish", 1130, 100, 100, 40);
-        root.getChildren().add(btnFinish);
-
-        // show score to user
-
-
-        // save score
-
-        // show rankings
+        // Rankings popup
         rankingGroup = new Group();
         rankingGroup.setLayoutX(0);
         rankingGroup.setLayoutY(0);
 
-
+        // a table showing the ranking info
         table = new TableView<User>();
-
 
         c1 = new TableColumn("Name");
         c1.setPrefWidth(150);
@@ -270,10 +293,9 @@ public class Main extends Application {
         rankingGroup.setVisible(false);
 
 
-
-
     }
 
+    // create new digital keyboard button with style
     public Button createNewButton(String keyName, double x, double y, double width, double height) {
         Button btn = new Button(keyName);
         btn.setLayoutX(x);
@@ -287,19 +309,25 @@ public class Main extends Application {
         return btn;
     }
 
+    // actions when hit a button
     public void pressAButton(Button btn) {
         btn.setOnMousePressed(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent e) {
+
+                // style change when hitting a keyboard key
                 btn.setEffect(ds0);
                 btn.setTranslateX(1);
                 btn.setTranslateY(1);
                 btn.setStyle("-fx-background-color: "+ keyPressedColor + "; -fx-text-fill: white;");
-                System.out.println("You hit the key " + btn.getText());
 
+
+                // game start when hitting start
                 if (btn.getText() == "Start") {
 
-
+                    // avoid there is spaces in user name
                     userName = userNameInput.getText().replaceAll("\\s","");
+
+                    // user name can not be empty
                     if (userName.length() == 0) {
                         Alert alert = new Alert(Alert.AlertType.INFORMATION);
                         alert.setTitle("Need a user name");
@@ -313,60 +341,11 @@ public class Main extends Application {
                         t0 = new Date().getTime();
                     }
 
-                    System.out.println(userName);
+                    gameStarted = true;
 
                 }
 
-                if (btn.getText() == "Finish") {
-
-                    // test
-                    accuracy = Math.random();
-                    long t1 = new Date().getTime();
-                    speed = passage.length() / ((t1 - t0) / 1000.0 / 60.0);
-
-                    User u = new User(userName, accuracy, speed, t1);
-
-                    scoreLabel.setText(
-                        "Result: \n\n" +
-                        "Score: " + u.getScore() + "\n" +
-                        "Accuracy: " + u.getAccuracy() + "\n" +
-                        "Speed(letters/min): " + u.getSpeed() + "\n" +
-                        "date: " + u.getDate() + "\n"
-                    );
-
-                    btnRanking.setVisible(true);
-                    btnSwitchUser.setVisible(true);
-                    btnTryAgain.setVisible(true);
-                    btnStart.setVisible(false);
-                    resultHBox.setVisible(true);
-                    userNameHBox.setVisible(false);
-                    startGroup.setVisible(true);
-                    popup.setVisible(true);
-
-                    try {
-                        File f = new File("ranking.txt");
-                        if (f.createNewFile()) {
-                            System.out.println("File created: " + f.getName());
-                        }
-
-                        FileWriter fw = new FileWriter("ranking.txt", true);
-                        BufferedWriter bfw = new BufferedWriter(fw);
-                        bfw.write(
-                            userName + " " +
-                            u.getScore() + " " +
-                            accuracy + " " +
-                            speed + " " +
-                            t1 +
-                            "\n"
-                        );
-                        bfw.close();
-
-                    } catch (IOException event) {
-                        System.out.println(event.toString());
-                    }
-
-                }
-
+                // try again with the same user name
                 if (btn.getText() == "Try Again") {
 
                     t0 = new Date().getTime();
@@ -376,6 +355,7 @@ public class Main extends Application {
 
                 }
 
+                // change to another user to play
                 if (btn.getText() == "Switch User") {
 
                     btnSwitchUser.setVisible(false);
@@ -386,9 +366,14 @@ public class Main extends Application {
 
                 }
 
+                // show rankings
                 if (btn.getText() == "Ranking") {
+
                     ArrayList<User> arr = new ArrayList<>();
+
                     try {
+
+                        // init the ranking info
                         Scanner s = new Scanner(new File("ranking.txt"));
                         int count = 0;
 
@@ -428,7 +413,6 @@ public class Main extends Application {
                             count++;
                         }
                         arr = insertionSort(arr, 0);
-                        // printAnArrayList(arr);
 
                         c1.setCellValueFactory(new PropertyValueFactory<>("name"));
                         c2.setCellValueFactory(new PropertyValueFactory<>("score"));
@@ -439,6 +423,7 @@ public class Main extends Application {
                         for (User ele : arr) {
                             table.getItems().add(ele);
                         }
+
                     } catch (FileNotFoundException event) {
                         System.out.println(event.toString());
                     }
@@ -446,11 +431,13 @@ public class Main extends Application {
                     rankingGroup.setVisible(true);
                 }
 
+                // close the ranking popup
                 if (btn.getText() == "Close") {
                     startGroup.setVisible(true);
                     rankingGroup.setVisible(false);
                 }
 
+                // exit
                 if (btn.getText() == "Exit") {
                     ((Stage) btn.getScene().getWindow()).close();
                 }
@@ -458,6 +445,7 @@ public class Main extends Application {
             }
         });
 
+        // style changes on the digital keyboard keys when released
         btn.setOnMouseReleased(new EventHandler<MouseEvent>() {
             public void handle(MouseEvent e) {
                 btn.setEffect(ds1);
@@ -469,16 +457,17 @@ public class Main extends Application {
         });
     }
 
+    // support to print an array list
     public static void printAnArrayList(ArrayList<User> list) {
         System.out.println("");
         ListIterator<User> li = list.listIterator();
         while(li.hasNext()) {
             System.out.print(li.next().getScore() + " ");
         }
-        // System.out.println(list.size());
         System.out.println("");
     }
 
+    // ranking sorting using insertion sort
     public static ArrayList<User> insertionSort(ArrayList<User> arr, int index) {
 
         ArrayList<User> result = arr;
@@ -504,31 +493,112 @@ public class Main extends Application {
         return result;
     }
 
+    // typing and showing the incorrect characters
+    public void showText(String passage, ArrayList<Integer> incorrectIndexes) {
+
+        String str = userInput.getText();
+
+        for (int i = 0; i < passage.length(); i++) {
+            Text text = new Text(Character.toString(passage.charAt(i)));
+            letters.add(text);
+            text.setFont(Font.font("Verdana", 20));
+            if (i < str.length()) {
+                text.setFill(Color.GREEN);
+            }
+            for (int j = 0; j < incorrectIndexes.size(); j++) {
+                if (i == incorrectIndexes.get(j)) {
+                    text.setFill(Color.RED);
+                }
+            }
+            textOverflow.getChildren().add(text);
+        }
+
+    }
+
+    // monitoring user typing action
+    private void onKeyPressed(KeyEvent event) {
+        if (gameStarted) {
+            String str = userInput.getText();
+
+            int sl = str.length();
+            int pl = passage.length();
+
+            // adding incorrect characters' indexes
+            ArrayList<Integer> incorrectIndexesTemp = new ArrayList<>();
+            for (int i = 0; i < sl; i++) {
+                if (str.charAt(i) != passage.charAt(i)) {
+                    incorrectIndexesTemp.add(i);
+                }
+            }
+            incorrectIndexes = incorrectIndexesTemp;
+
+            textOverflow.getChildren().clear();
+            showText(passage, incorrectIndexes);
 
 
+            // automatically show the result when user finishes typing
+            if (sl == pl) {
+                gameStarted = false;
 
+                accuracy = (pl - incorrectIndexes.size())/(double)pl;
+                long t1 = new Date().getTime();
+                speed = pl / ((t1 - t0) / 1000.0 / 60.0);
 
+                User u = new User(userName, accuracy, speed, t1);
+
+                scoreLabel.setText(
+                    "Result: \n\n" +
+                    "Score: " + u.getScore() + "\n" +
+                    "Accuracy: " + u.getAccuracy() + "\n" +
+                    "Speed(letters/min): " + u.getSpeed() + "\n" +
+                    "date: " + u.getDate() + "\n"
+                );
+
+                btnRanking.setVisible(true);
+                btnSwitchUser.setVisible(true);
+                btnTryAgain.setVisible(true);
+                btnStart.setVisible(false);
+                resultHBox.setVisible(true);
+                userNameHBox.setVisible(false);
+                startGroup.setVisible(true);
+                popup.setVisible(true);
+
+                // write user's result to txt file
+                try {
+                    FileWriter fw = new FileWriter("ranking.txt", true);
+                    BufferedWriter bfw = new BufferedWriter(fw);
+                    bfw.write(
+                        userName + " " +
+                        u.getScore() + " " +
+                        accuracy + " " +
+                        speed + " " +
+                        t1 +
+                        "\n"
+                    );
+                    bfw.close();
+
+                } catch (IOException event1) {
+                    System.out.println(event1.toString());
+                }
+
+            }
+
+        }
+    }
 
     // randomly generate a passage
     public String getPassage() {
-        Random rand = new Random();
-        int result = rand.nextInt(3);
-        if(result == 0)
-        {
-            passage = "She reached her goal, exhausted. Even more chilling to her was that"
-                    + " the euphoria that she thought she'd feel upon \nreaching it wasn't there."
-                    + " Something wasn't right. Was this the only feeling she'd have for over five years of hard work?";
-        }
-        else if(result == 1) {
-            passage = "He looked at the sand. Picking up a handful, he wondered how many grains were in his hand."
-                    + " Hundreds of thousands?\n\"Not enough,\" the said under his breath. I need more.";
-        }
-        else {
-            passage = "The computer wouldn't start. She banged on the side and tried again. Nothing."
-                    + " She lifted it up and dropped it to \nthe table. Still nothing. She banged her closed fist against the top."
-                    + " It was at this moment she saw the irony of \ntrying to fix the machine with violence.";
-        }
-        return passage;
+        String[] passages = new String[] {
+            "She reached her goal, exhausted. Even more chilling to her was that the euphoria that she thought she'd feel upon reaching it wasn't there.",
+            "Something wasn't right. Was this the only feeling she'd have for over five years of hard work?",
+            "He looked at the sand. Picking up a handful, he wondered how many grains were in his hand.",
+            "Hundreds of thousands? Not enough, the said under his breath. I need more.",
+            "The computer wouldn't start. She banged on the side and tried again. Nothing.",
+            "She lifted it up and dropped it to the table. Still nothing. She banged her closed fist against the top.",
+            "It was at this moment she saw the irony of trying to fix the machine with violence."
+        };
+        int index = (int)Math.floor(Math.random() * passages.length);
+        return passages[index];
     }
 
 }
